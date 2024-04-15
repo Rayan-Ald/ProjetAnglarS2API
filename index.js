@@ -1,6 +1,6 @@
 // Import the functions you need from the SDKs you need
 const { initializeApp } = require('firebase/app');
-const { getAuth, signInWithEmailAndPassword, signOut } = require('firebase/auth');
+const { getAuth, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } = require('firebase/auth');
 const express = require('express');
 const cors = require('cors');
 const {
@@ -72,8 +72,26 @@ function login(email, password) {
   .catch((error) => {
     var errorCode = error.code;
     var errorMessage = error.message;
-    console.log(errorCode, errorMessage); 
-    throw error;
+    console.log(errorCode, errorMessage);
+    return false;
+  });
+}
+
+function signin(email, password) {
+  console.log(email, password);
+
+  createUserWithEmailAndPassword(auth, email, password)
+  .then((userCredential) => {
+    // Signed in
+    var user = userCredential.user;
+    console.log(user);
+    return user;
+  })
+  .catch((error) => {
+    var errorCode = error.code;
+    var errorMessage = error.message;
+    console.log(errorCode, errorMessage);
+    return false; 
   });
 }
 
@@ -96,7 +114,28 @@ appExpress.post('/loginUser', async (req, res) => {
   console.log('LOGIN user');
   console.log(req.body);
   let q = login(req.body.email, req.body.password);
-  res.json(q);
+  console.log('response ' , q);
+  if(q) {
+    res.status(200).json(q);
+  }
+  else {
+    res.status(201).json(q)
+  }
+  console.log('status code ' , res);
+})
+
+appExpress.post('/signinUser', async (req, res) => {
+  console.log('SIGNIN user');
+  console.log(req.body);
+  let q = signin(req.body.email, req.body.password);
+  console.log('response ' , q);
+  if(q) {
+    res.status(200).json(q)
+  }
+  else {
+    res.status(201).json(q)
+  }
+  console.log('status code ' , res);
 })
 
 appExpress.get('/logout', function(req , res){
