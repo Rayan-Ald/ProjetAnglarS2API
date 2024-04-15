@@ -39,7 +39,11 @@ const getHotels= async () => {
     console.log('No hotels were found for this id');
     return null;
   } else {
-    const hotelsData = querySnapshot.docs[0].data();
+    const hotelsData = [];
+    //foreach querySnapshot.docs
+    for (const doc of querySnapshot.docs) {
+      hotelsData.push(doc.data());
+    }
     console.log(hotelsData);
     return hotelsData;
   }
