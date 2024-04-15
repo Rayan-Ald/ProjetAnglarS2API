@@ -1,6 +1,11 @@
 // Import the functions you need from the SDKs you need
 const { initializeApp } = require('firebase/app');
-const { getAuth, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } = require('firebase/auth');
+const {
+  getAuth,
+  signInWithEmailAndPassword,
+  signOut,
+  createUserWithEmailAndPassword,
+} = require('firebase/auth');
 const express = require('express');
 const cors = require('cors');
 const {
@@ -25,13 +30,12 @@ const firebaseConfig = {
 // Initialize Firebase
 appExpress.use(cors());
 const app = initializeApp(firebaseConfig);
-const db = getFirestore(app); 
+const db = getFirestore(app);
 const auth = getAuth(app);
 
 appExpress.use(express.json());
 
-
-const getHotels= async () => {
+const getHotels = async () => {
   const hotelsRef = collection(db, 'hotels');
   const queryRef = query(hotelsRef);
   const querySnapshot = await getDocs(queryRef);
@@ -58,52 +62,58 @@ const getHotels= async () => {
 
 // ////////////// client part //////////////////
 
-
-function login(email, password) {
+async function login(email, password) {
   console.log(email, password);
 
-  signInWithEmailAndPassword(auth, email, password)
-  .then((userCredential) => {
+  try {
+    userCredential = await signInWithEmailAndPassword(auth, email, password);
     // Signed in
     var user = userCredential.user;
-    console.log(user);
-    return user;
-  })
-  .catch((error) => {
-    var errorCode = error.code;
-    var errorMessage = error.message;
-    console.log(errorCode, errorMessage);
-    return false;
-  });
+    console.log(userCredential);
+    if (user) {
+      console.log('SUCCESSSSSSSSSSSSSSSSSSSSSSSS');
+      return { success: true, user: user };
+    } else {
+      return { success: false, message: 'invalid credentials' };
+    }
+  } catch (error) {
+    return { success: false, message: 'invalid credentials' };
+  }
 }
 
-function signin(email, password) {
+async function signin(email, password) {
   console.log(email, password);
-
-  createUserWithEmailAndPassword(auth, email, password)
-  .then((userCredential) => {
-    // Signed in
+  try {
+    userCredential = await createUserWithEmailAndPassword(
+      auth,
+      email,
+      password
+    );
     var user = userCredential.user;
-    console.log(user);
-    return user;
-  })
-  .catch((error) => {
+    if (user) {
+      // Signed in
+      console.log(user);
+      return { success: true, user: user };
+    } else {
+      return { success: false, message: 'invalid credentials' };
+    }
+  } catch {
     var errorCode = error.code;
     var errorMessage = error.message;
     console.log(errorCode, errorMessage);
-    return false; 
-  });
+    return { success: false, message: 'invalid credentials' };
+  }
 }
 
 function logout() {
-  signOut(auth).then(() => {
-    res.redirect('/');
-  }).catch((error) => {
-    console.log(error);
-  });
+  signOut(auth)
+    .then(() => {
+      res.redirect('/');
+    })
+    .catch((error) => {
+      console.log(error);
+    });
 }
-
-
 appExpress.get('/hotels', async (req, res) => {
   console.log('GET /hotels');
   let q = await getHotels();
@@ -113,32 +123,33 @@ appExpress.get('/hotels', async (req, res) => {
 appExpress.post('/loginUser', async (req, res) => {
   console.log('LOGIN user');
   console.log(req.body);
-  let q = login(req.body.email, req.body.password);
-  console.log('response ' , q);
-  if(q) {
-    res.status(200).json(q);
+
+  let q = await login(req.body.email, req.body.password);
+  console.log('result', q);
+  if (q.success) {
+    res.status(200).json(q.user);
+  } else {
+    res.status(201).json({ message: 'Utilisateur non trouvé' });
   }
-  else {
-    res.status(201).json(q)
-  }
-  console.log('status code ' , res);
-})
+});
 
 appExpress.post('/signinUser', async (req, res) => {
   console.log('SIGNIN user');
   console.log(req.body);
-  let q = signin(req.body.email, req.body.password);
-  console.log('response ' , q);
-  if(q) {
-    res.status(200).json(q)
+  try {
+    let q = await signin(req.body.email, req.body.password);
+    console.log('user ', q);
+    if (q) {
+      res.status(200).json(q);
+    } else {
+      res.status(201).json({ message: 'Utilisateur non trouvé' });
+    }
+  } catch (error) {
+    res.status(201).json({ message: 'Erreur du serveur' });
   }
-  else {
-    res.status(201).json(q)
-  }
-  console.log('status code ' , res);
-})
+});
 
-appExpress.get('/logout', function(req , res){
+appExpress.get('/logout', function (req, res) {
   console.log('LOGOUT user');
   let q = logout();
   res.json(q);
@@ -147,5 +158,3 @@ appExpress.get('/logout', function(req , res){
 appExpress.listen(3000, () => {
   console.log('Serveur démarré sur le port 3000');
 });
-
-
