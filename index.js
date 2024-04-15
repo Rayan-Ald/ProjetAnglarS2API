@@ -1,5 +1,6 @@
 // Import the functions you need from the SDKs you need
 const { initializeApp } = require('firebase/app');
+const { getAuth, signInWithEmailAndPassword, signOut } = require('firebase/auth');
 const express = require('express');
 const cors = require('cors');
 const {
@@ -24,40 +25,11 @@ const firebaseConfig = {
 // Initialize Firebase
 appExpress.use(cors());
 const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+const db = getFirestore(app); 
+const auth = getAuth(app);
 
-// const addDrink = async (userId, centilitres) => {
-//   const userRef = doc(db, "user", userId);
-//   const userDoc = await getDoc(userRef);
-//   if (userDoc.exists()) {
-//     const today = new Date().toISOString().substr(0, 10);
-//     const userDrinksRef = collection(db, "userDrinks");
-//     const queryRef = query(
-//       userDrinksRef,
-//       where("userId", "==", userId),
-//       where("date", "==", today)
-//     );
-//     const querySnapshot = await getDocs(queryRef);
-//     let userDrinksDoc;
-//     if (querySnapshot.size === 0) {
-//       userDrinksDoc = await addDoc(userDrinksRef, {
-//         userId,
-//         date: today,
-//         total: centilitres,
-//       });
-//     } else {
-//       userDrinksDoc = querySnapshot.docs[0];
-//       const data = userDrinksDoc.data();
-//       const newTotal = data.total + centilitres;
-//       await updateDoc(userDrinksDoc.ref, { total: newTotal });
-//     }
-//     console.log(`Added ${centilitres} cl to user ${userId} on ${today}`);
-//     return { success: true };
-//   } else {
-//     console.log("User not found");
-//     return { success: false, error: "User not found" };
-//   }
-// };
+appExpress.use(express.json());
+
 
 const getHotels= async () => {
   const hotelsRef = collection(db, 'hotels');
@@ -79,12 +51,58 @@ const getHotels= async () => {
 //   let q = await getHotelParId(hotelid);
 //   res.json(q);
 // });
+
+// ////////////// client part //////////////////
+
+
+function login(email, password) {
+  console.log(email, password);
+
+  signInWithEmailAndPassword(auth, email, password)
+  .then((userCredential) => {
+    // Signed in
+    var user = userCredential.user;
+    console.log(user);
+    return user;
+  })
+  .catch((error) => {
+    var errorCode = error.code;
+    var errorMessage = error.message;
+    console.log(errorCode, errorMessage); 
+    throw error;
+  });
+}
+
+function logout() {
+  signOut(auth).then(() => {
+    res.redirect('/');
+  }).catch((error) => {
+    console.log(error);
+  });
+}
+
+
 appExpress.get('/hotels', async (req, res) => {
   console.log('GET /hotels');
   let q = await getHotels();
   res.json(q);
 });
 
+appExpress.post('/loginUser', async (req, res) => {
+  console.log('LOGIN user');
+  console.log(req.body);
+  let q = login(req.body.email, req.body.password);
+  res.json(q);
+})
+
+appExpress.get('/logout', function(req , res){
+  console.log('LOGOUT user');
+  let q = logout();
+  res.json(q);
+});
+
 appExpress.listen(3000, () => {
   console.log('Serveur démarré sur le port 3000');
 });
+
+
